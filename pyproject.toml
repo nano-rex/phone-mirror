@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "phonemirror"
+version = "0.1.0"
+description = "Mirror and control Android and iOS devices from Windows, macOS or Linux"
+readme = "README.md"
+license = { text = "GPL-3.0-or-later" }
+requires-python = ">=3.9"
+dependencies = [
+    "av>=12",
+    "numpy",
+    "pygame-ce>=2.4",
+]
+
+[project.scripts]
+phonemirror = "phonemirror.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["phonemirror*"]
+
+[tool.setuptools.package-data]
+"phonemirror.android" = ["scrcpy-server-v*", "SCRCPY-LICENSE"]
