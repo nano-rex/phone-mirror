@@ -149,7 +149,8 @@ class Viewer:
     # main loop ----------------------------------------------------------
     def run(self):
         pygame.init()
-        pygame.display.set_caption(self.backend.title)
+        self.caption = self.backend.title
+        pygame.display.set_caption(self.caption)
         self.font = pygame.font.Font(None, 20)
         self.set_mode((420, 860))
         self.clipboard = Clipboard()
@@ -165,6 +166,9 @@ class Viewer:
                 else:
                     self.handle(event)
             self.update_frame()
+            if self.backend.title != self.caption:
+                self.caption = self.backend.title
+                pygame.display.set_caption(self.caption)
             text = self.backend.pop_clipboard()
             if text is not None:
                 self.clipboard.put(text)
@@ -175,7 +179,12 @@ class Viewer:
 
     def update_frame(self):
         frame = self.backend.latest_frame()
-        if frame is None or frame.seq == self.frame_seq:
+        if frame is None:
+            if self.frame_surface is not None:  # stream ended; show the waiting screen
+                self.frame_surface = self.scaled = None
+                self.frame_seq = None
+            return
+        if frame.seq == self.frame_seq:
             return
         self.frame_seq = frame.seq
         try:
@@ -202,7 +211,7 @@ class Viewer:
                 self.scaled = pygame.transform.smoothscale(self.frame_surface, self.content.size)
             self.screen.blit(self.scaled, self.content.topleft)
         else:
-            self.center_text("Waiting for video...")
+            self.draw_waiting()
         if self.backend.error:
             self.center_text(f"Disconnected: {self.backend.error}", y_offset=30)
         if self.toolbar:
@@ -215,6 +224,47 @@ class Viewer:
                 img = self.font.render(label, True, TEXT)
                 self.screen.blit(img, img.get_rect(center=rect.center))
         pygame.display.flip()
+
+    def draw_waiting(self):
+        w, h = self.screen.get_size()
+        area_h = h - self.bar_height()
+        lines = self.backend.waiting_lines()
+        line_h = self.font.get_linesize() + 2
+        uri = self.backend.qr_uri
+        qr = self.qr_surface(uri, min(w - 40, area_h - 60 - line_h * len(lines))) if uri else None
+        total = (qr.get_height() + 16 if qr else 0) + line_h * len(lines)
+        y = max((area_h - total) // 2, 8)
+        if qr:
+            self.screen.blit(qr, qr.get_rect(midtop=(w // 2, y)))
+            y += qr.get_height() + 16
+        for line in lines:
+            img = self.font.render(line, True, MUTED)
+            self.screen.blit(img, img.get_rect(midtop=(w // 2, y)))
+            y += line_h
+
+    def qr_surface(self, uri, size):
+        """Render a QR code for uri, cached per (uri, size)."""
+        if size < 80:
+            return None
+        key = (uri, size)
+        if getattr(self, "_qr_key", None) != key:
+            try:
+                import segno
+            except ImportError:
+                return None
+            matrix = [list(row) for row in segno.make(uri, error="m").matrix]
+            border = 4
+            n = len(matrix) + 2 * border
+            module = max(size // n, 1)
+            surf = pygame.Surface((n * module, n * module))
+            surf.fill((255, 255, 255))
+            for r, row in enumerate(matrix):
+                for c, dark in enumerate(row):
+                    if dark:
+                        surf.fill((0, 0, 0), ((c + border) * module, (r + border) * module,
+                                              module, module))
+            self._qr_key, self._qr = key, surf
+        return self._qr
 
     def center_text(self, text, y_offset=0):
         w, h = self.screen.get_size()

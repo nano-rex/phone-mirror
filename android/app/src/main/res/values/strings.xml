@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">phonemirror</string>
+    <string name="control_label">phonemirror control</string>
+    <string name="control_summary">Lets your paired computer tap, swipe and type while you are mirroring</string>
+    <string name="control_description">phonemirror control turns mouse and keyboard input from your paired computer into taps, swipes, buttons and typing on this phone.\n\nIt only acts while you are mirroring with the phonemirror app to the computer you paired with, over an encrypted connection. It does not collect, store or send what is on your screen except as the video you chose to share, and it never types into password fields.\n\nYou can turn it off here at any time.</string>
+    <string name="channel_name">Mirroring</string>
+    <string name="stop">Stop</string>
+    <string name="notif_connecting">Connecting to %1$s…</string>
+    <string name="notif_mirroring">Sharing your screen with %1$s</string>
+    <string name="status_connecting">Connecting to %1$s…</string>
+    <string name="status_mirroring">Mirroring to %1$s</string>
+    <string name="status_capture_denied">Android did not allow screen capture. Try again.</string>
+    <string name="status_encoder_failed">This phone\'s video encoder failed. Try again.</string>
+    <string name="status_disconnected">The computer disconnected.</string>
+    <string name="status_control_off">Control is off on the phone. Open phonemirror on the phone and turn on control.</string>
+</resources>

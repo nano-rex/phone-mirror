@@ -9,6 +9,10 @@ Mirror and control an Android or iOS device from a Windows, macOS or Linux compu
   [WebDriverAgent](https://github.com/appium/WebDriverAgent) (WDA): tap, long press, swipe,
   scroll, typing, Home, volume and lock.
 
+- **Android app (easiest)**: install the phonemirror app, scan a QR code once, then tap
+  *Start mirroring* whenever you want. Works over Wi-Fi with no USB debugging and no adb; the
+  app walks you through each permission. See [Android app](#android-app-over-wi-fi).
+
 One window, the same controls for both platforms, written in Python with
 [PyAV](https://pyav.basswood-io.com/) for decoding and [pygame-ce](https://pyga.me/) for the window.
 
@@ -35,7 +39,9 @@ install is needed.
 ## Usage
 
 ```sh
-phonemirror              # picks the connected Android device, or WDA if it answers
+phonemirror              # adb device if connected, else WDA if it answers, else waits for the app
+phonemirror app          # wait for the phonemirror Android app over Wi-Fi (shows the pairing QR)
+phonemirror setup android  # install and set up the Android app over USB
 phonemirror devices      # list Android (adb) and iOS devices
 phonemirror android      # Android over adb
 phonemirror ios          # iOS through WebDriverAgent
@@ -64,7 +70,48 @@ phonemirror ios          # iOS through WebDriverAgent
 Alt means the **left** Alt key (Option on macOS), so AltGr keeps typing characters such as `@`.
 The button bar at the bottom has the same actions; hide it with `--no-toolbar`.
 
-## Android setup
+## Android app over Wi-Fi
+
+1. Run `phonemirror` (or `phonemirror app`) on the computer. With no phone on USB it shows a
+   QR code. On Windows, allow Python through the firewall when asked (private networks only).
+2. Install `phonemirror-android.apk` on the phone (Android 8.0+) and open it. It shows a short
+   checklist:
+   - **Pair with your computer**: tap *Scan the code*, point the camera at the QR code, and
+     confirm.
+   - **Allow control (optional)**: the app explains the step, then opens the exact Android
+     settings screen. Turn on *phonemirror control* and press Back; the checklist ticks itself.
+     If Android greys the switch out ("Restricted setting", Android 13+ for sideloaded apps), the
+     app shows how to unlock it from App info in two taps.
+   - **Show the Stop button**: allows the notification with a Stop button.
+3. Tap **Start mirroring** and confirm Android's screen-sharing prompt. Android asks every time,
+   on purpose, so screen sharing never starts without you.
+
+**Set up from the computer instead**: with USB debugging on, `phonemirror setup android`
+installs the app, turns on control (after asking you) and sends the pairing; you only tap
+*Pair* on the phone. `phonemirror setup android --undo` turns control off again and offers to
+uninstall the app.
+
+Compared with the adb mode below, the app types into the focused text field rather than sending
+real key presses, cannot type into password fields (on purpose), and cannot send the phone's
+clipboard to the computer.
+
+### Security
+
+- **Pairing**: the QR code carries a random 256-bit key. The phone asks you to confirm before
+  saving it, keeps it encrypted with an Android Keystore key, and excludes it from backups. The
+  computer keeps its copy in `pairings.json` (owner-only permissions) in its config folder.
+- **Connection**: each session runs an authenticated ECDH (P-256) handshake with that key, then
+  encrypts everything with AES-256-GCM (details in [docs/protocol.md](docs/protocol.md)).
+  Without the pairing nobody on the network can watch the screen or send input, and a
+  tampered or replayed packet ends the session.
+- **Least privilege**: the phone app listens on no port; it connects out to your computer only
+  when you tap Start. The control service acts only during an authenticated session, reads only
+  the focused text field when you type, and refuses password fields.
+- **Nothing permanent**: no root, no system changes. Stop from the notification, the app, or
+  Android's own screen-sharing indicator. Disconnecting lifts any finger still down.
+  Uninstalling the app removes everything it added.
+
+## Android setup (adb mode)
 
 1. Install Android **platform-tools** (it contains `adb`) and make sure `adb` is on `PATH`
    (or set `ADB=/path/to/adb`):
@@ -162,6 +209,19 @@ iOS:      phone (WebDriverAgent) --:9100 MJPEG--> JPEG frames -> window
 - `phonemirror/viewer.py` – the pygame window, letterboxing and the input mapping.
 
 ## Development
+
+Android app (`android/`, Kotlin, no AndroidX UI): needs JDK 17, Gradle 8.11 and the Android
+SDK (platform 35).
+
+```sh
+gradle -p android testDebugUnitTest assembleDebug
+```
+
+The unit tests check the app's crypto against the same vectors as `tests/test_link.py`; with
+`PM_INTEROP_PORT` set and `python tests/interop_server.py PORT` running, they also run a full
+handshake against the Python side.
+
+Computer app:
 
 ```sh
 pip install -e .

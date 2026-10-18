@@ -1,3 +1,3 @@
 """Mirror and control Android and iOS devices from a computer."""
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

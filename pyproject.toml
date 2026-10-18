@@ -4,15 +4,18 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "phonemirror"
-version = "0.1.0"
+version = "0.2.0"
 description = "Mirror and control Android and iOS devices from Windows, macOS or Linux"
 readme = "README.md"
 license = { text = "GPL-3.0-or-later" }
 requires-python = ">=3.9"
 dependencies = [
     "av>=12",
+    "cryptography>=41",
     "numpy",
     "pygame-ce>=2.4",
+    "segno>=1.5",
+    "zeroconf>=0.130",
 ]
 
 [project.scripts]

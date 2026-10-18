@@ -45,6 +45,19 @@ def build_parser():
 
     sub.add_parser("devices", help="list connected Android and iOS devices")
 
+    w = sub.add_parser("app", help="mirror the phonemirror Android app over Wi-Fi (no adb needed)")
+    w.add_argument("--port", type=int, default=27199, help="TCP port to listen on (default 27199)")
+
+    st = sub.add_parser("setup", help="set up a phone over USB")
+    st_sub = st.add_subparsers(dest="setup_platform", required=True)
+    sa = st_sub.add_parser("android", help="install the app, turn on control and pair, over adb")
+    sa.add_argument("-s", "--serial")
+    sa.add_argument("--apk", help="install this APK instead of downloading the latest release")
+    sa.add_argument("-y", "--yes", action="store_true", help="answer yes to the questions")
+    sa.add_argument("--no-control", action="store_true", help="do not turn on control")
+    sa.add_argument("--undo", action="store_true",
+                    help="turn phonemirror control off and offer to uninstall the app")
+
     a = sub.add_parser("android", help="mirror an Android device over adb (USB or Wi-Fi)")
     a.add_argument("-s", "--serial", help="adb serial (see `phonemirror devices`)")
     a.add_argument("--connect", metavar="HOST:PORT",
@@ -78,6 +91,9 @@ def build_parser():
 
 
 def make_backend(args):
+    if args.platform == "app":
+        from .link.backend import AppBackend
+        return AppBackend(port=args.port)
     if args.platform == "android":
         from .android.client import AndroidBackend
         return AndroidBackend(
@@ -114,13 +130,21 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if args.platform == "devices":
         return list_devices()
-    if args.platform is None:
-        platform = autodetect()
-        if platform is None:
-            parser.print_help()
-            print("\nNo device found: connect an Android phone with USB debugging enabled, "
-                  "or start WebDriverAgent on an iPhone (see README).", file=sys.stderr)
+    if args.platform == "setup":
+        from . import setup_android
+        from .adb import AdbError
+        try:
+            if args.undo:
+                return setup_android.undo(args.serial, args.yes)
+            return setup_android.run(args.serial, args.apk, args.yes, control=not args.no_control)
+        except (AdbError, OSError, RuntimeError) as exc:
+            print(f"phonemirror: {exc}", file=sys.stderr)
             return 1
+        except KeyboardInterrupt:
+            return 130
+    if args.platform is None:
+        # adb device, then WebDriverAgent, otherwise wait for the phone app over Wi-Fi
+        platform = autodetect() or "app"
         args = parser.parse_args((argv or sys.argv[1:]) + [platform])
 
     backend = None

@@ -19,6 +19,8 @@ class Backend:
     title = "phonemirror"
     # Toolbar buttons the backend can handle, as (label, key name) pairs.
     buttons = ()
+    # Pairing link to show as a QR code while no video is available.
+    qr_uri = None
 
     def __init__(self):
         self._frame = None
@@ -36,6 +38,10 @@ class Backend:
     def latest_frame(self):
         with self._frame_lock:
             return self._frame
+
+    def waiting_lines(self):
+        """Text shown in the window while no video is available."""
+        return ["Waiting for video..."]
 
     def _fail(self, message):
         if self.error is None:
